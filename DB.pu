@@ -1,0 +1,121 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "USERS" as USERS {
+  * id : BIGINT <<PK>>
+  --
+  name : STRING
+  email : STRING
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "FORMS" as FORMS {
+  * id : BIGINT <<PK>>
+  owner_user_id : BIGINT <<FK USERS.id>>
+  --
+  title : STRING
+  description : TEXT
+  is_active : BOOL
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  deleted_at : TIMESTAMP NULL
+}
+
+entity "SCREENS" as SCREENS {
+  * id : BIGINT <<PK>>
+  form_id : BIGINT <<FK FORMS.id>>
+  created_by_user_id : BIGINT <<FK USERS.id>>
+  --
+  title : STRING
+  display_order : INT
+  is_active : BOOL
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  deleted_at : TIMESTAMP NULL
+}
+
+entity "QUESTIONS" as QUESTIONS {
+  * id : BIGINT <<PK>>
+  form_id : BIGINT <<FK FORMS.id>>
+  --
+  type : ENUM
+  title : STRING
+  help_text : TEXT NULL
+  is_required : BOOL
+  max_select : TINYINT
+  display_order : INT
+  is_active : BOOL
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  deleted_at : TIMESTAMP NULL
+}
+
+entity "QUESTION_OPTIONS" as QUESTION_OPTIONS {
+  * id : BIGINT <<PK>>
+  question_id : BIGINT <<FK QUESTIONS.id>>
+  --
+  label : STRING
+  value : STRING NULL
+  display_order : INT
+  is_active : BOOL
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  deleted_at : TIMESTAMP NULL
+}
+
+entity "SCREEN_QUESTIONS" as SCREEN_QUESTIONS {
+  * id : BIGINT <<PK>>
+  screen_id : BIGINT <<FK SCREENS.id>>
+  question_id : BIGINT <<FK QUESTIONS.id>>
+  --
+  display_order : INT
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  == Constraints ==
+  UNIQUE(screen_id, question_id)
+  UNIQUE(screen_id, display_order)
+}
+
+entity "RESPONSES" as RESPONSES {
+  * id : ULID <<PK>>
+  form_id : BIGINT <<FK FORMS.id>>
+  --
+  respondent_key : STRING NULL
+  client_ip : STRING NULL
+  user_agent : TEXT NULL
+  status : ENUM
+  started_at : TIMESTAMP NULL
+  submitted_at : TIMESTAMP NULL
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "RESPONSE_ITEMS" as RESPONSE_ITEMS {
+  * id : BIGINT <<PK>>
+  response_id : ULID <<FK RESPONSES.id>>
+  question_id : BIGINT <<FK QUESTIONS.id>>
+  option_id : BIGINT <<FK QUESTION_OPTIONS.id>> NULL
+  --
+  free_text : TEXT NULL
+  numeric_value : DECIMAL(18,6) NULL
+  date_value : DATE NULL
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  == Constraint ==
+  UNIQUE(response_id, question_id, option_id, free_text)
+}
+
+USERS ||--o{ FORMS : owns
+USERS ||--o{ SCREENS : created
+FORMS ||--o{ SCREENS : has
+FORMS ||--o{ QUESTIONS : has
+QUESTIONS ||--o{ QUESTION_OPTIONS : has
+SCREENS ||--o{ SCREEN_QUESTIONS : lists
+QUESTIONS ||--o{ SCREEN_QUESTIONS : appears_in
+FORMS ||--o{ RESPONSES : receives
+RESPONSES ||--o{ RESPONSE_ITEMS : contains
+QUESTIONS ||--o{ RESPONSE_ITEMS : answered_by
+QUESTION_OPTIONS ||--o{ RESPONSE_ITEMS : chosen_in
+@enduml
