@@ -20,7 +20,8 @@
                 rows="4">{{ old('description', $form->description) }}</textarea>
       @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
-
+    
+    <input type="hidden" name="is_active" value="0">
     <div class="form-check mb-3">
       <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1"
              {{ old('is_active', $form->is_active) ? 'checked' : '' }}>
