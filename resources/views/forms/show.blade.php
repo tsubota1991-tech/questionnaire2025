@@ -25,11 +25,6 @@
     <a class="btn btn-outline-secondary" href="{{ route('forms.edit', $form) }}">編集</a>
     <a class="btn btn-outline-info" href="{{ route('forms.preview', $form) }}">プレビュー</a>
 
-    <form method="POST" action="{{ route('forms.duplicate', $form) }}">
-      @csrf
-      <button class="btn btn-outline-primary" type="submit">複製</button>
-    </form>
-
     <form method="POST" action="{{ route('forms.destroy', $form) }}" onsubmit="return confirm('削除しますか？');">
       @csrf @method('DELETE')
       <button class="btn btn-outline-danger" type="submit">削除</button>
