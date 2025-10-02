@@ -22,18 +22,19 @@ class Screen extends Model
     ];
     
     // リレーション
+
     public function form()
     {
-        return $this->belongsTo(Form::class);
+         return $this->belongsTo(\App\Models\Form::class); 
     }
-
+    
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     public function screenQuestions()
-    {
-        return $this->hasMany(ScreenQuestion::class);
+    { 
+        return $this->hasMany(\App\Models\ScreenQuestion::class); 
     }
 }
