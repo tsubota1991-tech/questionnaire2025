@@ -115,21 +115,6 @@ class FormController extends Controller
     }
 
     /**
-     * 複製
-     */
-    public function duplicate(Form $form)
-    {
-        $copy = $form->replicate();
-        $copy->title = $form->title . '（コピー）';
-        $copy->created_at = now();
-        $copy->updated_at = now();
-        $copy->save();
-
-        return redirect()->route('forms.index')
-            ->with('status', "「{$form->title}」を複製し「{$copy->title}」を作成しました。");
-    }
-
-    /**
      * アーカイブ（= is_active を false に）
      */
     public function archive(Form $form)

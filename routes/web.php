@@ -47,7 +47,6 @@ Route::middleware(['auth', ShareNavForm::class, 'throttle:120,1'])
 
     // ===== フォーム =====
     Route::resource('forms', FormController::class);
-    Route::post('forms/{form}/duplicate', [FormController::class, 'duplicate'])->name('forms.duplicate');
     Route::post('forms/{form}/archive',   [FormController::class, 'archive'])->name('forms.archive');
 
     // ===== 画面（フォーム配下）=====
