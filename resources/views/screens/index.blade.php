@@ -5,8 +5,6 @@
   <div class="d-flex align-items-center mb-3">
     <h1 class="h4 mb-0">画面一覧（フォーム #{{ $form->id }}：{{ $form->title }}）</h1>
     <div class="ms-auto d-flex gap-2">
-      {{-- ここから質問一覧へ誘導（フロー：フォーム → 画面 → 質問） --}}
-      <a href="{{ route('forms.questions.index', $form) }}" class="btn btn-dark">質問一覧</a>
       <a href="{{ route('forms.screens.create', $form) }}" class="btn btn-primary">＋ 画面追加</a>
     </div>
   </div>
@@ -24,7 +22,9 @@
       <button class="btn btn-outline-secondary">検索</button>
     </div>
   </form>
-
+  @error('display_order')
+    <div class="alert alert-danger">{{ $message }}</div>
+  @enderror
   @if ($screens->count() === 0)
     <div class="alert alert-light border">このフォームに紐づく画面はありません。「画面追加」から作成してください。</div>
   @else

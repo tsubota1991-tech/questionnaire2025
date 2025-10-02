@@ -5,7 +5,6 @@
   <div class="d-flex align-items-center mb-3">
     <h1 class="h4 mb-0">質問一覧（フォーム #{{ $form->id }}：{{ $form->title }}）</h1>
     <div class="ms-auto d-flex gap-2">
-      <a href="{{ route('forms.screens.index', $form) }}" class="btn btn-outline-dark">画面一覧へ</a>
       <a href="{{ route('forms.questions.create', $form) }}" class="btn btn-primary">＋ 質問追加</a>
     </div>
   </div>
