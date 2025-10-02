@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller; // 基底Controller
 use App\Models\Form;
 use App\Models\Screen;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
 class ScreenController extends Controller
 {
     /**
@@ -72,9 +74,18 @@ class ScreenController extends Controller
      */
     public function show(Screen $screen)
     {
-        // 親フォームも渡すとビューで戻りリンクが作りやすい
         $form = $screen->form;
-        return view('screens.show', compact('screen', 'form'));
+
+        // 現在この画面に配置されている質問（display_order順）
+        // ScreenQuestion 経由で question 情報を eager load
+        $placed = $screen->screenQuestions()
+            ->with(['question' => function ($q) {
+                $q->select('id','form_id','type','title','is_required','is_active');
+            }])
+            ->orderBy('display_order')
+            ->get();
+
+        return view('screens.show', compact('screen', 'form', 'placed'));
     }
 
     /**
@@ -132,13 +143,35 @@ class ScreenController extends Controller
      */
     public function reorder(Request $request, Screen $screen)
     {
-        // ここでは単一画面の display_order を直接更新する簡易版
         $validated = $request->validate([
-            'display_order' => ['required', 'integer', 'min:0'],
-        ]);
+            'display_order' => ['required', 'integer', 'min:1'],
+        ], [], ['display_order' => '表示順序']);
 
-        $screen->update(['display_order' => $validated['display_order']]);
+        DB::transaction(function () use ($screen, $validated) {
+            // 1) まず対象の希望順へ一旦更新（ここで既存と衝突しうるため直接当てない）
+            // → 代わりにあとでまとめて並べ替える
+            // 対象の順序をそのまま用い、兄弟リスト内で並び直す
+            $targetOrder = (int)$validated['display_order'];
 
-        return back()->with('status', "画面の表示順を {$validated['display_order']} に更新しました。");
+            $siblings = Screen::where('form_id', $screen->form_id)
+                ->orderBy('display_order')->orderBy('id')->get();
+
+            // 対象を除外して希望位置へ差し込み
+            $list = $siblings->reject(fn($s) => $s->id === $screen->id)->values();
+            $insertAt = max(0, min($targetOrder - 1, $list->count()));
+            $list->splice($insertAt, 0, [$screen]);
+
+            // 2) 衝突回避のため一時的に大きい番号へ退避
+            $base = 100000;
+            foreach ($list as $i => $row) {
+                $row->updateQuietly(['display_order' => $base + $i + 1]);
+            }
+            // 3) 最終的に 1..n で確定
+            foreach ($list as $i => $row) {
+                $row->updateQuietly(['display_order' => $i + 1]);
+            }
+        });
+
+        return back()->with('status', '並び順を更新し、1番から連番に整えました。');
     }
 }

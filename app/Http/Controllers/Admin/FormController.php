@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller; // 基底Controller
 use App\Models\Form;
 use Illuminate\Http\Request;
 

@@ -1,6 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+// ===== 管理画面コントローラ =====
+use App\Http\Controllers\Admin\FormController;
+use App\Http\Controllers\Admin\ScreenController;
+use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\ScreenQuestionController;
+use App\Http\Controllers\Admin\ResponseController;
+use App\Http\Middleware\ShareNavForm; // navForm 共有ミドルウェア
+
 
 // .env → config を参照
 $loginPath   = config('auth.login_path', 'login');
@@ -19,14 +27,6 @@ Route::middleware('guest')->group(function () use ($loginPath) {
 Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
-
-// ===== 管理画面コントローラ =====
-use App\Http\Controllers\FormController;
-use App\Http\Controllers\ScreenController;
-use App\Http\Controllers\QuestionController;
-use App\Http\Controllers\ScreenQuestionController;
-use App\Http\Controllers\ResponseController;
-use App\Http\Middleware\ShareNavForm; // navForm 共有ミドルウェア
 
 // ===== パラメータ制約 =====
 Route::pattern('form',     '[0-9]+');
