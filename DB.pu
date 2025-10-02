@@ -17,10 +17,14 @@ entity "FORMS" as FORMS {
   --
   title : STRING
   description : TEXT
+  public_path : STRING(32)            // 追加：公開URLのパス断片
+  public_path_generated_at : TIMESTAMP NULL  // 追加：発行日時
   is_active : BOOL
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
   deleted_at : TIMESTAMP NULL
+  == Constraints ==
+  UNIQUE(public_path, deleted_at)     // 削除済みなら再利用OK
 }
 
 entity "SCREENS" as SCREENS {
