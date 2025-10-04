@@ -14,6 +14,8 @@ class Form extends Model
         'title',
         'description',
         'is_active',
+        'public_path',
+        'public_path_generated_at',
     ];
 
     protected $casts = [
@@ -35,4 +37,9 @@ class Form extends Model
     {
         return $this->hasMany(Question::class);
     }
+    // スコープ
+    public function scopePublicActive($q)
+{
+    return $q->where('is_active', true)->whereNull('deleted_at');
+}
 }

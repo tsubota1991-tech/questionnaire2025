@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 // ===== 管理画面コントローラ =====
 use App\Http\Controllers\Admin\FormController;
+use App\Http\Controllers\Public\FormPublicController;
 use App\Http\Controllers\Admin\ScreenController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ScreenQuestionController;
@@ -72,4 +73,29 @@ Route::middleware(['auth', ShareNavForm::class, 'throttle:120,1'])
 
     // ===== プレビュー =====
     Route::get('forms/{form}/preview', [FormController::class, 'preview'])->name('forms.preview');
+});
+
+// ===== 公開画面 =====
+// 生成するランダムパスは英数字想定（Str::random）
+// 長さはマイグレーションの 32/16 に合わせて調整
+// ランダムパス（public_path）の想定（Str::random 由来）
+Route::pattern('form_slug', '[A-Za-z0-9]{8,64}');
+Route::pattern('step', '\d+');
+
+Route::prefix('f')->name('public.forms.')->group(function () {
+    // 入口
+    Route::get('{form_slug}', [FormPublicController::class, 'landing'])->name('landing');
+    // スタート（RESPONSESを作成し、step=1へ）
+    Route::post('{form_slug}/start', [FormPublicController::class, 'start'])->name('start');
+
+    // 画面（step は 1 始まり）
+    Route::get('{form_slug}/s/{step}', [FormPublicController::class, 'screen'])->name('screen');
+    Route::post('{form_slug}/s/{step}', [FormPublicController::class, 'submitScreen'])->name('screen.submit');
+
+    // 確認 & 送信
+    Route::get('{form_slug}/confirm', [FormPublicController::class, 'confirm'])->name('confirm');
+    Route::post('{form_slug}/submit', [FormPublicController::class, 'submit'])->name('submit');
+
+    // 完了
+    Route::get('{form_slug}/complete', [FormPublicController::class, 'complete'])->name('complete');
 });

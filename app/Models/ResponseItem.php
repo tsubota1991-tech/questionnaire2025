@@ -3,25 +3,37 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Response extends Model
+class ResponseItem extends Model
 {
-    public $incrementing = false; // ULID等
-    protected $keyType = 'string';
-
     protected $fillable = [
-        'id',         // ULID 生成をアプリ側でするなら fillable
-        'form_id',
-        'status',     // submitted / invalid / in_progress など
+        'response_id',
+        'question_id',
+        'option_id',
+        'free_text',
+        'numeric_value',
+        'date_value',
     ];
 
-    public function form()
+    protected $casts = [
+        'date_value' => 'date',
+        // 'numeric_value' => 'decimal:6', // 表示時に丸めたいなら有効化
+    ];
+
+    // ===== リレーション =====
+    public function response(): BelongsTo
     {
-        return $this->belongsTo(Form::class);
+        return $this->belongsTo(Response::class);
     }
 
-    public function items()
+    public function question(): BelongsTo
     {
-        return $this->hasMany(ResponseItem::class);
+        return $this->belongsTo(Question::class);
+    }
+
+    public function option(): BelongsTo
+    {
+        return $this->belongsTo(QuestionOption::class, 'option_id');
     }
 }
