@@ -8,6 +8,7 @@ use App\Models\Response;
 use App\Models\ResponseItem;
 use App\Models\Question;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ResponseController extends Controller
@@ -17,17 +18,71 @@ class ResponseController extends Controller
      */
     public function index(Form $form, Request $request)
     {
-        $statuses = ['submitted','invalid','in_progress']; // マイグレーションに合わせて調整可
+        $statuses = ['submitted','invalid','in_progress'];
         $status = $request->string('status')->toString();
+
+        // ★ ステータス日本語表記
+        $statusJa = [
+            'submitted'   => '提出済み',
+            'invalid'     => '無効',
+            'in_progress' => '進行中',
+        ];
 
         $responses = Response::query()
             ->where('form_id', $form->id)
-            ->when($status && in_array($status, $statuses), fn($q) => $q->where('status', $status))
+            ->when($status && in_array($status, $statuses, true), fn($q) => $q->where('status', $status))
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
 
-        return view('responses.index', compact('form', 'responses', 'status', 'statuses'));
+        return view('responses.index', compact('form', 'responses', 'status', 'statuses', 'statusJa'));
+    }
+
+    /**
+     * 古い回答の一括削除（ボタン実行）
+     * 既定：2日前より古い invalid / in_progress を対象
+     */
+    public function purge(Form $form, Request $request)
+    {
+        // 入力（任意で上書き可能にしておく）
+        $days     = (int) $request->input('days', 2);
+        $statuses = $request->filled('statuses')
+            ? collect(explode(',', (string) $request->input('statuses')))
+                ->map(fn($s) => trim($s))->filter()->values()->all()
+            : ['invalid', 'in_progress'];
+
+        // 許容ステータスのバリデーション（保険）
+        $allow = ['submitted','invalid','in_progress'];
+        $statuses = array_values(array_intersect($statuses, $allow));
+        if (empty($statuses)) {
+            return back()->with('status', '削除対象ステータスの指定が不正です。');
+        }
+
+        $cutoff = now()->subDays($days);
+
+        $base = Response::query()
+            ->where('form_id', $form->id)
+            ->whereIn('status', $statuses)
+            ->where('created_at', '<', $cutoff);
+
+        $count = (clone $base)->count();
+        if ($count === 0) {
+            return back()->with('status', "対象レコードはありません（{$days}日前より古い / ".implode(',', $statuses)."）。");
+        }
+
+        $deleted = 0;
+
+        // ULID 主キーでも chunkById は利用可（念のためカラム名明示）
+        $base->orderBy('id')->chunkById(500, function ($batch) use (&$deleted) {
+            DB::transaction(function () use ($batch, &$deleted) {
+                $ids = $batch->pluck('id');
+                // responses 削除 → response_items は FK の cascadeOnDelete で連鎖削除
+                Response::whereIn('id', $ids)->delete();
+                $deleted += $ids->count();
+            });
+        }, 'id');
+
+        return back()->with('status', "削除完了：{$deleted} 件（{$days}日前より古い / ".implode(',', $statuses)."）。");
     }
 
     /**
@@ -37,14 +92,29 @@ class ResponseController extends Controller
     {
         $form = $response->form;
 
-        // 回答詳細（関連アイテムを設問と選択肢も含めて）
         $items = ResponseItem::query()
             ->with(['question:id,title,type', 'option:id,label,value'])
             ->where('response_id', $response->id)
             ->orderBy('id')
             ->get();
 
-        return view('responses.show', compact('form', 'response', 'items'));
+        // 種別の日本語表記
+        $typeJa = [
+            'single_choice' => '単一選択',
+            'multi_choice'  => '複数選択',
+            'free_text'     => '自由入力',
+            'number'        => '数値入力',
+            'date'          => '日付入力',
+        ];
+
+        // ステータスの日本語表記
+        $statusJa = [
+            'submitted'   => '提出済み',
+            'invalid'     => '無効',
+            'in_progress' => '進行中',
+        ];
+
+        return view('responses.show', compact('form', 'response', 'items', 'typeJa', 'statusJa'));
     }
 
     /**
@@ -63,21 +133,6 @@ class ResponseController extends Controller
         $response->update(['status' => $validated['status']]);
 
         return back()->with('status', "回答のステータスを「{$validated['status']}」に変更しました。");
-    }
-
-    /**
-     * 簡易集計（件数のみ）
-     */
-    public function analytics(Form $form)
-    {
-        $counts = Response::selectRaw("status, COUNT(*) as cnt")
-            ->where('form_id', $form->id)
-            ->groupBy('status')
-            ->pluck('cnt','status');
-
-        $total = $counts->sum();
-
-        return view('responses.analytics', compact('form', 'counts', 'total'));
     }
 
     /**
@@ -110,14 +165,14 @@ class ResponseController extends Controller
 
             // 回答行（各回答を横持ちで出力）
             foreach ($responses as $res) {
-                // 回答アイテムを [question_id => 値] にマップ
-                $items = ResponseItem::where('response_id', $res->id)->get();
+                $items = ResponseItem::where('response_id', $res->id)
+                    ->with('option:id,label')
+                    ->get();
+
                 $map = [];
                 foreach ($items as $it) {
-                    // 選択式は label / value、自由記述は text、数値/日付はそれぞれの列を優先
-                    $val = null;
-                    if (!is_null($it->selected_option_id)) {
-                        $val = optional($it->option)->label ?? $it->option_id; // label を優先
+                    if (!is_null($it->option_id)) { 
+                        $val = optional($it->option)->label ?? $it->option_id;
                     } elseif (!is_null($it->numeric_value)) {
                         $val = $it->numeric_value;
                     } elseif (!is_null($it->date_value)) {
@@ -125,7 +180,7 @@ class ResponseController extends Controller
                     } else {
                         $val = $it->free_text;
                     }
-                    $map[$it->question_id][] = $val; // 複数選択に対応
+                    $map[$it->question_id][] = $val;       // 複数選択にも対応
                 }
 
                 $row = [$res->id, optional($res->created_at)->toDateTimeString(), $res->status];
