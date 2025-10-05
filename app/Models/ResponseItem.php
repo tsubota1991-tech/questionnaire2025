@@ -32,7 +32,7 @@ class ResponseItem extends Model
         return $this->belongsTo(Question::class);
     }
 
-    public function option(): BelongsTo
+    public function option()
     {
         return $this->belongsTo(QuestionOption::class, 'option_id');
     }
