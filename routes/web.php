@@ -68,11 +68,9 @@ Route::middleware(['auth', ShareNavForm::class, 'throttle:120,1'])
     Route::get('forms/{form}/responses',       [ResponseController::class, 'index'])->name('responses.index');
     Route::get('responses/{response}',         [ResponseController::class, 'show'])->name('responses.show');
     Route::post('responses/{response}/status', [ResponseController::class, 'changeStatus'])->name('responses.changeStatus');
-    Route::get('forms/{form}/analytics',       [ResponseController::class, 'analytics'])->name('responses.analytics');
     Route::get('forms/{form}/export',          [ResponseController::class, 'export'])->name('responses.export');
-
-    // ===== プレビュー =====
-    Route::get('forms/{form}/preview', [FormController::class, 'preview'])->name('forms.preview');
+    Route::post('forms/{form}/responses/purge', [ResponseController::class, 'purge'])
+        ->name('responses.purge');
 });
 
 // ===== 公開画面 =====
