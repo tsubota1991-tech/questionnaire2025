@@ -24,7 +24,7 @@
           <div class="text-muted small">ステータス</div>
           <div>
             <span class="badge bg-{{ $response->status === 'submitted' ? 'success' : ($response->status === 'invalid' ? 'danger' : 'secondary') }}">
-              {{ $response->status }}
+              {{ $statusJa[$response->status] ?? $response->status }}
             </span>
           </div>
         </div>
@@ -39,9 +39,9 @@
       <div class="col-md-4">
         <label class="form-label">ステータス変更</label>
         <select name="status" class="form-select">
-          <option value="submitted" @selected($response->status==='submitted')>submitted</option>
-          <option value="invalid" @selected($response->status==='invalid')>invalid</option>
-          <option value="in_progress" @selected($response->status==='in_progress')>in_progress</option>
+          @foreach ($statusJa as $val => $label)
+            <option value="{{ $val }}" @selected($response->status===$val)>{{ $label }}</option>
+          @endforeach
         </select>
       </div>
       <div class="col-auto">
@@ -72,19 +72,33 @@
                 <tr>
                   <td>{{ $it->question_id }}</td>
                   <td>{{ optional($it->question)->title }}</td>
-                  <td class="text-muted">{{ optional($it->question)->type }}</td>
+                  <td class="text-muted">
+                    {{ $typeJa[optional($it->question)->type] ?? optional($it->question)->type }}
+                  </td>
                   <td>
-                    @if ($it->selected_option_id)
-                      {{-- 選択肢のラベルを優先表示（無ければvalue/ID） --}}
-                      {{ optional($it->option)->label ?? $it->selected_option_id }}
+                    @if ($it->option_id)  {{-- ← ここを selected_option_id から変更 --}}
+                      {{-- 選択肢のラベルを優先表示（無ければ ID） --}}
+                      {{ optional($it->option)->label ?? $it->option_id }}
                       @if(optional($it->option)->value)
                         <span class="text-muted small"> ({{ optional($it->option)->value }})</span>
                       @endif
                     @elseif (!is_null($it->numeric_value))
                       {{ $it->numeric_value }}
                     @elseif (!is_null($it->date_value))
-                      {{ $it->date_value }}
-                    @else
+                        @php
+                          $dv = $it->date_value;
+                          if ($dv instanceof \Carbon\CarbonInterface) {
+                              $dv = $dv->format('Y-m-d');
+                          } elseif (is_string($dv)) {
+                              // 先頭の YYYY-MM-DD だけ使う
+                              if (preg_match('/^\d{4}-\d{2}-\d{2}/', $dv)) {
+                                  $dv = substr($dv, 0, 10);
+                              }
+                          }
+                        @endphp
+                        {{ $dv }}
+
+                      @else
                       {!! nl2br(e($it->free_text)) !!}
                     @endif
                   </td>
