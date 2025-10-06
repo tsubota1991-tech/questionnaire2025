@@ -60,7 +60,7 @@
               @endif
             </td>
             <td class="text-nowrap">
-              <div class="btn-group me-1">
+              <div class="btn-group me-1 position-static">
                 <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                   設定
                 </button>
@@ -71,7 +71,7 @@
                   <li><a class="dropdown-item" href="{{ route('forms.questions.index', $form) }}">質問一覧</a></li>
                 </ul>
               </div>
-              <div class="btn-group">
+              <div class="btn-group position-static">
                 <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                   回答
                 </button>
