@@ -20,11 +20,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call([
-            FormSeeder::class,
-            ScreenSeeder::class,
-            QuestionSeeder::class,
-            ScreenQuestionSeeder::class,
-            QuestionOptionSeeder::class, 
+            SampleSurveySeeder::class,
         ]);
     }
 
