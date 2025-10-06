@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller; // 基底Controller
+use App\Http\Controllers\Controller;
 use App\Models\Form;
 use App\Models\Question;
 use App\Models\QuestionOption;
@@ -11,30 +11,25 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Requests\Admin\Question\StoreRequest;
 use App\Http\Requests\Admin\Question\UpdateRequest;
+
 class QuestionController extends Controller
 {
-    /** 値=英語コード, ラベル=日本語（ビューに渡す） */
-    private const TYPE_MAP = [
-        'single_choice' => '単一選択',
-        'multi_choice'  => '複数選択',
-        'free_text'     => '自由入力',
-        'number'        => '数値入力',
-        'date'          => '日付入力',
-    ];
-
-    /** 日本語→英語コードの正規化マップ */
-    private const JP_TO_CODE = [
-        '単一選択' => 'single_choice',
-        '複数選択' => 'multi_choice',
-        '自由入力' => 'free_text',
-        '数値入力' => 'number',
-        '日付入力' => 'date',
-    ];
-    /** 日本語でも英語でも渡ってきた値を英語コードに正規化 */
-    private static function normalizeType(string $raw): string
+    /**
+     * 日本語/英語どちらで来ても英語コードへ正規化
+     * 例) '単一選択' -> 'single_choice', 'single_choice' -> 'single_choice'
+     */
+    private static function normalizeType(?string $raw): ?string
     {
-        if (isset(self::TYPE_MAP[$raw])) return $raw;               // 既に英語コード
-        return self::JP_TO_CODE[$raw] ?? $raw;                       // 日本語→英語 or そのまま
+        if ($raw === null || $raw === '') return $raw;
+
+        // すでに英語コードならそのまま
+        if (array_key_exists($raw, Question::TYPE_MAP)) {
+            return $raw;
+        }
+
+        // 日本語→英語（TYPE_MAP の value を逆引き）
+        $code = array_search($raw, Question::TYPE_MAP, true);
+        return $code !== false ? $code : $raw;
     }
 
     /**
@@ -67,23 +62,18 @@ class QuestionController extends Controller
      */
     public function create(Form $form)
     {
-        $typeMap = [
-            'single_choice'=>'単一選択','multi_choice'=>'複数選択',
-            'free_text'=>'自由入力','number'=>'数値入力','date'=>'日付入力',
-        ];
-        $jpToCode = [
-            '単一選択'=>'single_choice','複数選択'=>'multi_choice',
-            '自由入力'=>'free_text','数値入力'=>'number','日付入力'=>'date',
-        ];
+        // 画面のプルダウン用にモデルの定数を利用
+        $typeMap = Question::TYPE_MAP;
 
+        // old 値が日本語でも英語でも現在値に対応（英語コードに寄せる）
         $rawType     = old('type', '');
-        $currentType = $jpToCode[$rawType] ?? $rawType;
+        $currentType = self::normalizeType($rawType);
 
         // max_select と old('options') の大きい方を採用
-        $oldOptionsArr = old('options', []);              // 例: [ ['label'=>'A'], ['label'=>''], ['label'=>'C'] ... ]
+        $oldOptionsArr = old('options', []);
         $n = max((int)old('max_select', 6), count($oldOptionsArr));
 
-        // ★ 空も含め、0..n-1 の添字で固定長配列を作る（フィルタしない・再索引しない）
+        // 空も含め、0..n-1 の添字で固定長配列を作る
         $initialOptions = [];
         for ($i = 0; $i < $n; $i++) {
             $initialOptions[$i] = (string) (old("options.$i.label") ?? '');
@@ -91,12 +81,16 @@ class QuestionController extends Controller
 
         $initialMax = $n;
 
-        return view('questions.create', compact('form','typeMap','currentType','initialOptions','initialMax'));
+        return view('questions.create', compact(
+            'form','typeMap','currentType','initialOptions','initialMax'
+        ));
     }
 
     public function store(StoreRequest $request, Form $form)
     {
         $data = $request->validated();
+        // ★ type を英語コードに正規化（日本語でPOSTされてもOK）
+        $data['type'] = self::normalizeType($data['type'] ?? '');
 
         DB::transaction(function () use ($data, $form) {
             // 1) 質問レコード作成
@@ -152,7 +146,8 @@ class QuestionController extends Controller
      */
     public function show(Question $question)
     {
-        $form = $question->form; // 戻りリンク用
+        $question->load(['form','options' => fn($q) => $q->orderBy('display_order')]);
+        $form = $question->form;
         return view('questions.show', compact('question', 'form'));
     }
 
@@ -165,17 +160,10 @@ class QuestionController extends Controller
         $question->load(['form','options' => fn($q)=>$q->orderBy('display_order')]);
         $form = $question->form;
 
-        $typeMap = [
-            'single_choice'=>'単一選択','multi_choice'=>'複数選択',
-            'free_text'=>'自由入力','number'=>'数値入力','date'=>'日付入力',
-        ];
-        $jpToCode = [
-            '単一選択'=>'single_choice','複数選択'=>'multi_choice',
-            '自由入力'=>'free_text','数値入力'=>'number','日付入力'=>'date',
-        ];
+        $typeMap = Question::TYPE_MAP;
 
         $rawType     = old('type', $question->type ?? '');
-        $currentType = $jpToCode[$rawType] ?? $rawType;
+        $currentType = self::normalizeType($rawType);
 
         // DB のラベル（display_order 順）
         $dbLabels = $question->options->pluck('label')->all();
@@ -188,7 +176,7 @@ class QuestionController extends Controller
             count($oldOptionsArr)
         );
 
-        // ★ 0..n-1 の添字で固定長。old があれば優先、無ければ DB、無ければ空文字
+        // 0..n-1 の添字で固定長。old があれば優先、無ければ DB、無ければ空文字
         $initialOptions = [];
         for ($i = 0; $i < $n; $i++) {
             $oldVal = old("options.$i.label");
@@ -197,7 +185,7 @@ class QuestionController extends Controller
 
         $initialMax = $n;
 
-        // エラーを JS に渡すための加工（以前の説明通り）
+        // エラーを JS に渡すための加工
         $optionErrorMap = [];
         foreach (session('errors')?->getMessages() ?? [] as $key => $msgs) {
             if (preg_match('/^options\.(\d+)\.label$/', $key, $m)) {
@@ -211,14 +199,15 @@ class QuestionController extends Controller
         ));
     }
 
-
     /**
      * 更新（shallow）
      * Route: questions.update
      */
- public function update(UpdateRequest $request, Form $form, Question $question)
+    public function update(UpdateRequest $request, Form $form, Question $question)
     {
         $data = $request->validated();
+        // ★ type を英語コードに正規化
+        $data['type'] = self::normalizeType($data['type'] ?? '');
 
         DB::transaction(function () use ($data, $question) {
             // 1) 質問本体を更新
@@ -268,7 +257,6 @@ class QuestionController extends Controller
                         if ($i < $existCount) {
                             // 既存を上書き
                             $existing[$i]->fill($payload);
-                            // 既に削除済みかもしれないので復活
                             if (method_exists($existing[$i], 'restore')) $existing[$i]->restore();
                             $existing[$i]->save();
                         } else {

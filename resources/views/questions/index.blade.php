@@ -48,7 +48,7 @@
                 <div class="small text-muted text-truncate" style="max-width:520px;">{{ $q->help_text }}</div>
               @endif
             </td>
-            <td class="text-muted">{{ $q->type }}</td>
+            <td class="text-muted">{{ $q->type_label }}</td>
             <td>{{ $q->display_order }}</td>
             <td>
               @if($q->is_active)
@@ -62,7 +62,7 @@
               <a class="btn btn-sm btn-outline-secondary" href="{{ route('questions.edit', $q) }}">編集</a>
               <form method="POST" action="{{ route('questions.reorder', $q) }}" class="d-inline-flex align-items-center gap-1">
                 @csrf @method('PATCH')
-                <input type="number" name="display_order" class="form-control form-control-sm" style="width:90px" value="{{ $q->display_order }}" min="0">
+                <input type="number" name="display_order" class="form-control form-control-sm" style="width:90px" value="{{ $q->display_order }}" min="1">
                 <button class="btn btn-sm btn-outline-info" type="submit">順序保存</button>
               </form>
               <form method="POST" action="{{ route('questions.destroy', $q) }}" class="d-inline" onsubmit="return confirm('削除しますか？');">

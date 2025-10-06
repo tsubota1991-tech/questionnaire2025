@@ -19,7 +19,14 @@ class Question extends Model
         'display_order', // 並び順
         'is_active',     // 有効/無効
     ];
-
+    public const TYPE_MAP = [
+        'single_choice' => '単一選択',
+        'multi_choice'  => '複数選択',
+        'free_text'     => '自由入力',
+        'number'        => '数値入力',
+        'date'          => '日付入力',
+    ];
+    
     protected $casts = [
         'is_required'   => 'boolean',
         'is_active'     => 'boolean',
@@ -68,5 +75,11 @@ class Question extends Model
             ];
         });
     }
-    
+    //$question->type_label で日本語が取れる}
+    public function getTypeLabelAttribute(): string
+    {
+        // 余計な空白・大小文字ゆらぎを吸収
+        $code = is_string($this->type) ? strtolower(trim($this->type)) : '';
+        return self::TYPE_MAP[$code] ?? $code;
+    }
 }

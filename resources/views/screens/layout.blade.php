@@ -41,11 +41,11 @@
                         <input type="number"
                                name="order[{{ $row->question_id }}]"
                                class="form-control form-control-sm"
-                               value="{{ $row->display_order }}" min="0">
+                               value="{{ $row->display_order }}" min="1">
                       </td>
                       <td class="fw-semibold">{{ $row->question->title }}</td>
                       <td class="text-muted">
-                        {{ $row->question->type }}
+                        {{ $row->question->type_label }}
                       </td>
                       <td>
                         @if($row->question->is_active)
@@ -85,7 +85,7 @@
                     <div>
                       <div class="fw-semibold">{{ $q->title }}</div>
                       <div class="small text-muted">
-                        種別: {{ $q->type }}
+                        種別: {{ $q->type_label }}
                         @if(!$q->is_active)
                           <span class="badge bg-secondary ms-2">無効</span>
                         @endif
