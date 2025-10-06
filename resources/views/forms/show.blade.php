@@ -1,4 +1,3 @@
-{{-- resources/views/forms/show.blade.php --}}
 @extends('layouts.admin')
 @section('title','フォーム詳細')
 
@@ -14,7 +13,7 @@
     </div>
   </div>
 
-  {{-- ★ 追加：公開URL --}}
+  {{-- ★ 公開URL --}}
   <div class="card mb-3">
     <div class="card-body">
       <div class="d-flex align-items-start align-items-md-center gap-3 flex-column flex-md-row">
@@ -57,8 +56,6 @@
 
   <div class="d-flex flex-wrap gap-2 mb-4">
     <a class="btn btn-outline-secondary" href="{{ route('forms.edit', $form) }}">編集</a>
-    <a class="btn btn-outline-info" href="{{ route('forms.preview', $form) }}">プレビュー</a>
-
     <form method="POST" action="{{ route('forms.destroy', $form) }}" onsubmit="return confirm('削除しますか？');">
       @csrf @method('DELETE')
       <button class="btn btn-outline-danger" type="submit">削除</button>
@@ -69,5 +66,6 @@
     <a class="btn btn-dark" href="{{ route('forms.screens.index', $form) }}">画面一覧</a>
     <a class="btn btn-secondary" href="{{ route('forms.index') }}">フォーム一覧へ</a>
   </div>
-<script src="{{ mix('js/admin/form-show.js') }}" defer></script>
+
+  <script src="{{ mix('js/admin/form-show.js') }}" defer></script>
 @endsection
